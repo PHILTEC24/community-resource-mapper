@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community Resource Mapper</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-dark: #0f172a;
+            --surface: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            background-color: #f8fafc;
+        }
+
+        #app-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        #sidebar {
+            width: 380px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            box-shadow: var(--shadow);
+        }
+
+        .sidebar-header {
+            padding: 24px 20px 16px;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            color: white;
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sidebar-header p {
+            font-size: 0.825rem;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        .sidebar-content {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-main);
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+            background: #f8fafc;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+            background: #fff;
+        }
+
+        .coords-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .help-text {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            display: block;
+        }
+
+        button.btn-primary {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+        }
+
+        button.btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button.btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        #map {
+            flex: 1;
+            height: 100%;
+            width: 100%;
+        }
+
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+            padding: 6px;
+            box-shadow: var(--shadow);
+        }
+
+        .popup-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: #eff6ff;
+            color: var(--primary);
+            margin-bottom: 6px;
+        }
+
+        .popup-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .popup-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin: 6px 0;
+        }
+
+        .popup-contact {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        #mobile-toggle {
+            display: none;
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1100;
+            background: var(--bg-dark);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 20px;
+            font-weight: 600;
+            box-shadow: var(--shadow);
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            #sidebar {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                height: 60vh;
+                border-right: none;
+                border-top-left-radius: 16px;
+                border-top-right-radius: 16px;
+                transform: translateY(100%);
+            }
+
+            #sidebar.open {
+                transform: translateY(0);
+            }
+
+            #mobile-toggle {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <!-- Sidebar Panel -->
+        <div id="sidebar">
+            <div class="sidebar-header">
+                <h1> Resource Mapper</h1>
+                <p>Map vital health, safety, and community infrastructure.</p>
+            </div>
+            
+            <div class="sidebar-content">
+                <form id="resourceForm">
+                    <div class="form-group">
+                        <label for="name">Resource Name</label>
+                        <input type="text" id="name" placeholder="e.g. Kasangati Community Clinic" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="category">Category</label>
+                        <select id="category" required>
+                            <option value="Health Center">🏥 Health Center</option>
+                            <option value="Water Point">🚰 Water Point</option>
+                            <option value="Security">🛡️ Police / Security</option>
+                            <option value="Education">📚 School / Library</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Coordinates</label>
+                        <div class="coords-grid">
+                            <input type="number" step="any" id="lat" placeholder="Latitude" required>
+                            <input type="number" step="any" id="lng" placeholder="Longitude" required>
+                        </div>
+                        <span class="help-text">💡 Click anywhere on the map to auto-set coordinates.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone">Contact Info</label>
+                        <input type="text" id="phone" placeholder="+256 700 000000">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Description & Services</label>
+                        <textarea id="description" rows="3" placeholder="Describe facilities, hours, or access details..."></textarea>
+                    </div>
+
+                    <button type="submit" id="submitBtn" class="btn-primary">Publish to Cloud Map</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Interactive Map Panel -->
+        <div id="map"></div>
+
+        <!-- Mobile Drawer Toggle Button -->
+        <button id="mobile-toggle">➕ Add Resource</button>
+    </div>
+
+    <!-- Leaflet Engine JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Firebase SDK Modules -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBQA0TtxKcrlNv6WrkVBzCcPbVCtpL5ofc",
+            authDomain: "community-resource-mappe-a5383.firebaseapp.com",
+            projectId: "community-resource-mappe-a5383",
+            storageBucket: "community-resource-mappe-a5383.firebasestorage.app",
+            messagingSenderId: "589831304206",
+            appId: "1:589831304206:web:7d61e37c8f8e0a7d61b85f"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const resourcesRef = collection(db, "resources");
+
+        // Initialize Interactive Leaflet Map (Centered around Kampala)
+        const map = L.map('map', { zoomControl: false }).setView([0.3476, 32.5825], 13);
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        // Load OpenStreetMap tiles (no API key required)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Map Click Event for Coordinate Picking
+        map.on('click', function(e) {
+            document.getElementById('lat').value = e.latlng.lat.toFixed(6);
+            document.getElementById('lng').value = e.latlng.lng.toFixed(6);
+            
+            if (window.innerWidth <= 768) {
+                document.getElementById('sidebar').classList.add('open');
+            }
+        });
+
+        // Real-time Firebase Sync & Marker Pinning
+        onSnapshot(resourcesRef, (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === "added") {
+                    const data = change.doc.data();
+                    const marker = L.marker([data.latitude, data.longitude]).addTo(map);
+                    marker.bindPopup(`
+                        <span class="popup-badge">${data.category}</span>
+                        <div class="popup-title">${data.name}</div>
+                        <div class="popup-desc">${data.description || "No description provided."}</div>
+                        <div class="popup-contact">📞 ${data.phone}</div>
+                    `);
+                }
+            });
+        });
+
+        // Submit Form to Cloud
+        document.getElementById('resourceForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.innerText = "Publishing...";
+            submitBtn.disabled = true;
+
+            try {
+                await addDoc(resourcesRef, {
+                    name: document.getElementById('name').value,
+                    category: document.getElementById('category').value,
+                    latitude: parseFloat(document.getElementById('lat').value),
+                    longitude: parseFloat(document.getElementById('lng').value),
+                    phone: document.getElementById('phone').value || "N/A",
+                    description: document.getElementById('description').value,
+                    createdAt: new Date()
+                });
+
+                document.getElementById('resourceForm').reset();
+                if (window.innerWidth <= 768) {
+                    document.getElementById('sidebar').classList.remove('open');
+                }
+            } catch (error) {
+                alert("Error saving: " + error.message);
+            } finally {
+                submitBtn.innerText = "Publish to Cloud Map";
+                submitBtn.disabled = false;
+            }
+        });
+
+        // Mobile Drawer Toggle
+        const sidebar = document.getElementById('sidebar');
+        const toggleBtn = document.getElementById('mobile-toggle');
+
+        toggleBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            toggleBtn.innerText = sidebar.classList.contains('open') ? "❌ Close Panel" : "➕ Add Resource";
+        });
+    </script>
+</body>
+</html>
