@@ -22,7 +22,7 @@ A real-time web application designed to help citizens, emergency services, and c
 
 ## 🚀 Live Demo
 Check out the live deployed application here:  
-👉 [https://YOUR_USERNAME.github.io/community-resource-mapper/](https://PHILTEC24.github.io/community-resource-mapper/)
+👉 [https://PHILTEC24.github.io/community-resource-mapper/](https://PHILTEC24.github.io/community-resource-mapper/)
 
 ---
 
